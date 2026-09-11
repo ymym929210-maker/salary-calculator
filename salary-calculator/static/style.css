@@ -1,0 +1,383 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg: #12161c;
+  --surface: #1b2129;
+  --surface-2: #232a33;
+  --border: #2c3440;
+  --text: #e9ecef;
+  --text-dim: #8b95a3;
+  --accent: #c9a227;
+  --accent-dim: #7a6420;
+  --danger: #d9765a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+}
+
+body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 로그인 화면 ─────────────────────────────────── */
+.login-wrap {
+  width: 100%;
+  max-width: 360px;
+  margin-top: 12vh;
+}
+
+.login-wrap h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.login-wrap p {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 28px;
+}
+
+.code-input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 20px;
+  letter-spacing: 4px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.code-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #14181d;
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.btn:hover { background: #ddb230; }
+.btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+.error-msg {
+  margin-top: 12px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.hint {
+  margin-top: 24px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ── 계산기 화면 ─────────────────────────────────── */
+.page {
+  width: 100%;
+  max-width: 640px;
+}
+
+.page-wide {
+  max-width: 1100px;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.page-head h1 {
+  font-size: 21px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.page-head a {
+  color: var(--text-dim);
+  font-size: 13px;
+  text-decoration: none;
+}
+.page-head a:hover { color: var(--text); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px;
+  margin-bottom: 24px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.field select,
+.field input[type="number"] {
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.field select:focus,
+.field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.checkbox-row input { accent-color: var(--accent); }
+
+/* ── 결과: 급여명세 형태 ────────────────────────── */
+.slip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.slip-section-title {
+  padding: 14px 24px 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  border-top: 1px solid var(--border);
+}
+
+.slip-section-title:first-child { border-top: none; }
+
+.slip-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 24px;
+  font-size: 14px;
+}
+
+.slip-row .amount { color: var(--text); }
+
+.slip-total {
+  display: flex;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.slip-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 22px 24px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+
+.slip-net .label {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.slip-net .amount {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.disclaimer {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.year-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.year-table th {
+  text-align: right;
+  padding: 10px 14px;
+  color: var(--text-dim);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Space Grotesk', sans-serif;
+}
+.year-table th:first-child { text-align: left; }
+
+.year-table td {
+  text-align: right;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.year-table td:first-child {
+  text-align: left;
+  font-family: 'Space Grotesk', sans-serif;
+  color: var(--text-dim);
+}
+
+.year-table .amount-cell {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.year-table .tag {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+@media (max-width: 480px) {
+  .year-table { font-size: 11px; }
+  .year-table th, .year-table td { padding: 8px 6px; }
+}
+
+@media (max-width: 480px) {
+  .field-row { grid-template-columns: 1fr; }
+  .card { padding: 20px; }
+}
+
+.compare-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.compare-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.compare-year {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.compare-amount {
+  font-size: 22px;
+  font-weight: 600;
+}
+.compare-amount.accent { color: var(--accent); }
+
+.compare-sub {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.compare-arrow {
+  font-size: 20px;
+  color: var(--text-dim);
+}
+
+.year-heading {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 32px 0 12px;
+  color: var(--text-dim);
+}
+
+.month-slip {
+  margin-bottom: 14px;
+}
+
+.month-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.grade-tag {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(201, 162, 39, 0.12);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.next-year-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 24px;
+  font-size: 12px;
+  color: var(--text-dim);
+  border-top: 1px dashed var(--border);
+}
