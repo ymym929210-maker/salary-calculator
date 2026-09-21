@@ -381,3 +381,12 @@ body {
   color: var(--text-dim);
   border-top: 1px dashed var(--border);
 }
+
+.exempt-tag {
+  font-size: 10px;
+  color: var(--accent);
+  background: rgba(201, 162, 39, 0.12);
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 4px;
+}
