@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>월급 계산기 · 접속</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="login-wrap">
+    <h1>월급 계산기</h1>
+    <p>허용된 사용자만 이용할 수 있습니다.<br>공용 접속번호를 입력해 주세요.</p>
+    <form method="post">
+      <input class="code-input" type="password" name="code" inputmode="numeric"
+             autofocus autocomplete="off" placeholder="접속번호">
+      <button class="btn" type="submit">입장</button>
+    </form>
+    {% if error %}<p class="error-msg">{{ error }}</p>{% endif %}
+    <p class="hint">입력값과 결과는 서버에 저장하지 않습니다. 로그인은 12시간 후 만료됩니다.</p>
+  </div>
+</body>
+</html>

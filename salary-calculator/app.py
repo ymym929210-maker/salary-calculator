@@ -36,10 +36,15 @@ def longevity_rate_for(years: float) -> float:
     return min(rate, config.LONGEVITY_MAX_RATE)
 
 
-def base_for_step(step: int, raise_rate: float = 0) -> int:
+def apply_raise(amount: float, rate: float) -> int:
+    """금액에 인상률(%)을 적용하고 1,000원 단위로 반올림 (실제 관행)."""
+    return round(amount * (1 + rate / 100) / 1000) * 1000
+
+
+def base_2027_for_step(step: int) -> int:
+    """2026년 9월 5.6% 인상이 이미 확정된, 2027년에 쓰는 고정 기본급."""
     step = min(max(step, min(STEPS)), max(STEPS))
-    raw = SALARY_TABLE[step] * (1 + raise_rate / 100)
-    return round(raw / 1000) * 1000  # 실제 관행대로 1,000원 단위 반올림
+    return apply_raise(SALARY_TABLE[step], config.THIS_YEAR_RAISE_RATE)
 
 
 def hourly_wage_for(base: int) -> int:
@@ -49,10 +54,6 @@ def hourly_wage_for(base: int) -> int:
 
 def step_for_month(start_step: int, promo_month: int, m: int) -> int:
     return start_step if m < promo_month else start_step + 1
-
-
-def raise_rate_for_month(raise_rate: float, m: int) -> float:
-    return raise_rate if m >= config.RAISE_EFFECTIVE_MONTH else 0
 
 
 def calc_month(base, hourly_wage, years, family_count, overtime_hours, month, step, retro_amount=0):
@@ -96,46 +97,58 @@ def calc_month(base, hourly_wage, years, family_count, overtime_hours, month, st
     if self_dev:
         items.append(("자기계발비", self_dev, False, True))
     if retro_amount:
-        items.append((f"소급인상분 ({config.RETRO_START_MONTH}~{config.RETRO_END_MONTH}월분)",
+        items.append((f"소급인상분 ({config.RETRO_START_MONTH}~{config.RETRO_END_MONTH}월, 기본급·상여·시간외 포함)",
                        retro_amount, False, True))
 
     gross = sum(v for _, v, _, _ in items)
-    taxable_total = sum(v for _, v, is_exempt, _ in items if not is_exempt)
-    exempt_total = gross - taxable_total
+    exempt_total = sum(v for _, v, is_exempt, _ in items if is_exempt)
     return {
         "month_name": MONTH_NAMES[month - 1], "step": step, "lines": items,
-        "gross": gross, "taxable_total": taxable_total, "exempt_total": exempt_total,
+        "gross": gross, "exempt_total": exempt_total,
     }
 
 
-def calc_year(step, promo_month, years, family_count, overtime_hours_annual, raise_rate):
+def calc_2027(step, promo_month, years, family_count, overtime_hours_annual):
+    """2027년: 5.6% 인상이 이미 확정된 고정 기본급으로 연중 계산."""
+    monthly_overtime = overtime_hours_annual / 12
+    months = []
+    for m in range(1, 13):
+        current_step = step_for_month(step, promo_month, m)
+        base = base_2027_for_step(current_step)
+        hourly_wage = hourly_wage_for(base)
+        months.append(calc_month(base, hourly_wage, years, family_count, monthly_overtime,
+                                  m, current_step))
+    year_total = sum(mo["gross"] for mo in months)
+    return {"months": months, "year_total": year_total}
+
+
+def calc_2028(step, promo_month, years, family_count, overtime_hours_annual, raise_rate):
+    """2028년: 9월에 raise_rate% 인상 확정, 9월부터 적용 + 3~8월 소급(기본급/상여/시간외 전부)."""
     monthly_overtime = overtime_hours_annual / 12
 
-    # 소급인상분(3~9월 차액 7개월치) 계산
     retro_total = 0
     for rm in range(config.RETRO_START_MONTH, config.RETRO_END_MONTH + 1):
         rm_step = step_for_month(step, promo_month, rm)
-        old_base = base_for_step(rm_step, 0)
-        new_base = base_for_step(rm_step, raise_rate)
-        retro_total += (new_base - old_base)
+        old_base = base_2027_for_step(rm_step)
+        new_base = apply_raise(old_base, raise_rate)
+        old_month = calc_month(old_base, hourly_wage_for(old_base), years, family_count,
+                                monthly_overtime, rm, rm_step)
+        new_month = calc_month(new_base, hourly_wage_for(new_base), years, family_count,
+                                monthly_overtime, rm, rm_step)
+        retro_total += (new_month["gross"] - old_month["gross"])
 
     months = []
     for m in range(1, 13):
         current_step = step_for_month(step, promo_month, m)
-        effective_raise = raise_rate_for_month(raise_rate, m)
-        base = base_for_step(current_step, effective_raise)
+        base_2027 = base_2027_for_step(current_step)
+        base = base_2027 if m < config.RAISE_EFFECTIVE_MONTH else apply_raise(base_2027, raise_rate)
         hourly_wage = hourly_wage_for(base)
         retro_amount = retro_total if m == config.RETRO_PAY_MONTH else 0
         months.append(calc_month(base, hourly_wage, years, family_count, monthly_overtime,
                                   m, current_step, retro_amount))
 
     year_total = sum(mo["gross"] for mo in months)
-    hourly_wage_start = hourly_wage_for(base_for_step(step, 0))
-    hourly_wage_after = hourly_wage_for(base_for_step(step + 1, raise_rate))
-    return {
-        "months": months, "year_total": year_total,
-        "hourly_wage_start": hourly_wage_start, "hourly_wage_after": hourly_wage_after,
-    }
+    return {"months": months, "year_total": year_total}
 
 
 def is_authed() -> bool:
@@ -179,12 +192,12 @@ def index():
     this_year = None
     next_year = None
     combined_months = None
-    current_year_label = datetime.now().year + 1  # 올해(2026)는 이미 지나서 다음 연도부터 표시
-    next_year_label = current_year_label + 1
+    current_year_label = datetime.now().year + 1  # 2027
+    next_year_label = current_year_label + 1        # 2028
 
     form_values = {
         "step": 12, "promo_month": 2, "years": 1, "family_count": 3,
-        "overtime_hours_annual": 0, "raise_rate": 0, "next_raise_rate": 0,
+        "overtime_hours_annual": 0, "next_raise_rate": 0,
     }
 
     if request.method == "POST":
@@ -195,32 +208,31 @@ def index():
             years=_num(f, "years", 1, float),
             family_count=_num(f, "family_count", 0, int),
             overtime_hours_annual=_num(f, "overtime_hours_annual", 0, float),
-            raise_rate=_num(f, "raise_rate", 0, float),
             next_raise_rate=_num(f, "next_raise_rate", 0, float),
         )
-        this_year = calc_year(
+        this_year = calc_2027(
             form_values["step"], form_values["promo_month"], form_values["years"],
             form_values["family_count"], form_values["overtime_hours_annual"],
-            form_values["raise_rate"],
         )
-        next_year = calc_year(
+        next_year = calc_2028(
             form_values["step"] + 1, form_values["promo_month"], form_values["years"],
             form_values["family_count"], form_values["overtime_hours_annual"],
             form_values["next_raise_rate"],
         )
-        combined_months = [
-            {
+        combined_months = []
+        for ty, ny in zip(this_year["months"], next_year["months"]):
+            next_retro = next(
+                (amt for name, amt, _, _ in ny["lines"] if name.startswith("소급인상분")), 0
+            )
+            combined_months.append({
                 "month_name": ty["month_name"],
                 "grade_label": f"{config.GRADE_LABEL} {ty['step']}호봉",
                 "lines": ty["lines"],
                 "gross": ty["gross"],
-                "taxable_total": ty["taxable_total"],
-                "exempt_total": ty["exempt_total"],
                 "next_gross": ny["gross"],
                 "next_grade_label": f"{config.GRADE_LABEL} {ny['step']}호봉",
-            }
-            for ty, ny in zip(this_year["months"], next_year["months"])
-        ]
+                "next_retro": next_retro,
+            })
 
     return render_template(
         "index.html", steps=STEPS, form=form_values,
