@@ -47,15 +47,8 @@
           <label for="overtime_hours_annual">연간 예상 시간외근무(시간)</label>
           <input type="number" id="overtime_hours_annual" name="overtime_hours_annual" min="0" step="1" value="{{ form.overtime_hours_annual }}">
         </div>
-        <div class="field"></div>
-      </div>
-      <div class="field-row">
         <div class="field">
-          <label for="raise_rate">{{ current_year_label }}년 임금인상률(%)</label>
-          <input type="number" id="raise_rate" name="raise_rate" min="0" step="0.1" value="{{ form.raise_rate }}">
-        </div>
-        <div class="field">
-          <label for="next_raise_rate">{{ next_year_label }}년 예상 인상률(%, 미정이면 0)</label>
+          <label for="next_raise_rate">{{ next_year_label }}년 인상률(%, 9월 확정 전이면 0)</label>
           <input type="number" id="next_raise_rate" name="next_raise_rate" min="0" step="0.1" value="{{ form.next_raise_rate }}">
         </div>
       </div>
@@ -66,19 +59,19 @@
     {% if this_year %}
     <div class="compare-box">
       <div class="compare-col">
-        <span class="compare-year">{{ current_year_label }}년 (인상률 {{ form.raise_rate }}%, 9월부터 적용)</span>
+        <span class="compare-year">{{ current_year_label }}년 (5.6% 인상 확정, 연중 고정)</span>
         <span class="compare-amount mono">{{ "{:,}".format(this_year.year_total) }}원</span>
       </div>
       <div class="compare-arrow">→</div>
       <div class="compare-col">
-        <span class="compare-year">{{ next_year_label }}년 예상 (인상률 {{ form.next_raise_rate }}%)</span>
+        <span class="compare-year">{{ next_year_label }}년 예상 (인상률 {{ form.next_raise_rate }}%, 9월부터)</span>
         <span class="compare-amount mono accent">{{ "{:,}".format(next_year.year_total) }}원</span>
       </div>
     </div>
     <p class="disclaimer" style="margin-top:-8px; margin-bottom:24px;">
-      {{ current_year_label }}년은 3~8월 인상 전 기본급으로 매달 지급되고, 9월부터 인상된 기본급표가 바로 적용되며
-      3~8월 차액(6개월치)이 9월에 "소급인상분"으로 한 번에 들어온다고 가정했습니다.
-      {{ next_year_label }}년 인상률은 미정이라 0으로 두면 인상 없이 계산됩니다.
+      {{ current_year_label }}년은 2026년 9월 확정된 5.6% 인상 기본급을 연중 그대로 씁니다.
+      {{ next_year_label }}년은 9월부터 인상된 기본급이 적용되고, 3~8월분 기본급·상여금·시간외수당 차액(6개월치)이
+      9월에 "소급인상분"으로 한 번에 들어온다고 가정했습니다. 인상률이 아직 안 나왔으면 0으로 두세요.
     </p>
 
     {% for mo in combined_months %}
@@ -97,14 +90,16 @@
         <span class="label" style="font-size:13px;">{{ current_year_label }}년 {{ mo.month_name }} 지급합계</span>
         <span class="amount mono" style="font-size:18px;">{{ "{:,}".format(mo.gross) }}원</span>
       </div>
-      <div class="slip-net taxable-row">
-        <span class="label" style="font-size:12px;">과세대상 (비과세 {{ "{:,}".format(mo.exempt_total) }}원 제외)</span>
-        <span class="amount mono" style="font-size:14px;">{{ "{:,}".format(mo.taxable_total) }}원</span>
-      </div>
       <div class="next-year-row">
         <span>{{ next_year_label }}년 {{ mo.month_name }} 예상 ({{ mo.next_grade_label }})</span>
         <span class="mono accent">{{ "{:,}".format(mo.next_gross) }}원</span>
       </div>
+      {% if mo.next_retro %}
+      <div class="next-year-row retro-row">
+        <span>└ 이 중 {{ next_year_label }}년 소급인상분 (3~8월분)</span>
+        <span class="mono accent">{{ "{:,}".format(mo.next_retro) }}원</span>
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
 
