@@ -113,7 +113,11 @@ def calc_month(base, hourly_wage, years, family_count, overtime_hours, month, st
                        retro_overtime, False, True))
 
     gross = sum(v for _, v, _, _ in items)
-    return {"month_name": MONTH_NAMES[month - 1], "step": step, "lines": items, "gross": gross}
+    return {
+        "month_name": MONTH_NAMES[month - 1], "step": step,
+        "grade_label": f"{config.GRADE_LABEL} {step}호봉",
+        "lines": items, "gross": gross,
+    }
 
 
 def calc_2027(step, promo_month, years, family_count, overtime_hours_annual):
@@ -209,7 +213,6 @@ def index():
 
     this_year = None
     next_year = None
-    combined_months = None
     current_year_label = datetime.now().year + 1  # 2027
     next_year_label = current_year_label + 1        # 2028
 
@@ -237,22 +240,10 @@ def index():
             form_values["family_count"], form_values["overtime_hours_annual"],
             form_values["next_raise_rate"],
         )
-        combined_months = [
-            {
-                "month_name": ty["month_name"],
-                "grade_label": f"{config.GRADE_LABEL} {ty['step']}호봉",
-                "lines": ty["lines"],
-                "gross": ty["gross"],
-                "next_lines": ny["lines"],
-                "next_gross": ny["gross"],
-                "next_grade_label": f"{config.GRADE_LABEL} {ny['step']}호봉",
-            }
-            for ty, ny in zip(this_year["months"], next_year["months"])
-        ]
 
     return render_template(
         "index.html", steps=STEPS, form=form_values,
-        this_year=this_year, next_year=next_year, combined_months=combined_months,
+        this_year=this_year, next_year=next_year,
         current_year_label=current_year_label, next_year_label=next_year_label,
     )
 

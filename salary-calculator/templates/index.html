@@ -16,6 +16,12 @@
     <form method="post" class="card">
       <div class="field-row">
         <div class="field">
+          <label for="grade">급수</label>
+          <select id="grade" name="grade">
+            <option value="8" selected>8급</option>
+          </select>
+        </div>
+        <div class="field">
           <label for="step">현재 호봉</label>
           <select id="step" name="step">
             {% for s in steps %}
@@ -23,6 +29,8 @@
             {% endfor %}
           </select>
         </div>
+      </div>
+      <div class="field-row">
         <div class="field">
           <label for="promo_month">호봉 오르는 달</label>
           <select id="promo_month" name="promo_month">
@@ -31,26 +39,27 @@
             {% endfor %}
           </select>
         </div>
-      </div>
-      <div class="field-row">
         <div class="field">
           <label for="years">근속연차 (호봉 오르는 달 기준 그 전 연차)</label>
           <input type="number" id="years" name="years" min="1" step="0.5" value="{{ form.years }}">
         </div>
+      </div>
+      <div class="field-row">
         <div class="field">
           <label for="family_count">가족수 (본인 포함 인원)</label>
           <input type="number" id="family_count" name="family_count" min="0" value="{{ form.family_count }}">
         </div>
-      </div>
-      <div class="field-row">
         <div class="field">
           <label for="overtime_hours_annual">연간 예상 시간외근무(시간)</label>
           <input type="number" id="overtime_hours_annual" name="overtime_hours_annual" min="0" step="1" value="{{ form.overtime_hours_annual }}">
         </div>
+      </div>
+      <div class="field-row">
         <div class="field">
           <label for="next_raise_rate">{{ next_year_label }}년 인상률(%, 9월 확정 전이면 0)</label>
           <input type="number" id="next_raise_rate" name="next_raise_rate" min="0" step="0.1" value="{{ form.next_raise_rate }}">
         </div>
+        <div class="field"></div>
       </div>
 
       <button class="btn" type="submit">계산하기</button>
@@ -60,12 +69,12 @@
     <div class="compare-box">
       <div class="compare-col">
         <span class="compare-year">{{ current_year_label }}년 (5.6% 인상 확정, 연중 고정)</span>
-        <span class="compare-amount mono">{{ "{:,}".format(this_year.year_total) }}원</span>
+        <span class="compare-amount mono accent">{{ "{:,}".format(this_year.year_total) }}원</span>
       </div>
       <div class="compare-arrow">→</div>
       <div class="compare-col">
         <span class="compare-year">{{ next_year_label }}년 예상 (인상률 {{ form.next_raise_rate }}%, 9월부터)</span>
-        <span class="compare-amount mono accent">{{ "{:,}".format(next_year.year_total) }}원</span>
+        <span class="compare-amount mono">{{ "{:,}".format(next_year.year_total) }}원</span>
       </div>
     </div>
     <p class="disclaimer" style="margin-top:-8px; margin-bottom:24px;">
@@ -75,10 +84,11 @@
       (4월은 상여금 대신 정근수당이 나가는 달이라 상여소급 계산에서 제외됩니다).
     </p>
 
-    {% for mo in combined_months %}
+    <h2 class="year-heading">{{ current_year_label }}년 (확정)</h2>
+    {% for mo in this_year.months %}
     <div class="slip month-slip">
       <div class="slip-section-title month-title">
-        <span>{{ current_year_label }}년 {{ mo.month_name }}</span>
+        <span>{{ mo.month_name }}</span>
         <span class="grade-tag">{{ mo.grade_label }}</span>
       </div>
       {% for name, amount, is_exempt, is_special in mo.lines %}
@@ -88,25 +98,28 @@
       </div>
       {% endfor %}
       <div class="slip-net" style="padding:14px 24px;">
-        <span class="label" style="font-size:13px;">{{ current_year_label }}년 {{ mo.month_name }} 합계</span>
+        <span class="label" style="font-size:13px;">{{ mo.month_name }} 합계</span>
         <span class="amount mono" style="font-size:18px;">{{ "{:,}".format(mo.gross) }}원</span>
       </div>
     </div>
+    {% endfor %}
 
+    <h2 class="year-heading">{{ next_year_label }}년 (예상)</h2>
+    {% for mo in next_year.months %}
     <div class="slip month-slip next-year-slip">
       <div class="slip-section-title month-title">
-        <span>{{ next_year_label }}년 {{ mo.month_name }} (예상)</span>
-        <span class="grade-tag">{{ mo.next_grade_label }}</span>
+        <span>{{ mo.month_name }}</span>
+        <span class="grade-tag">{{ mo.grade_label }}</span>
       </div>
-      {% for name, amount, is_exempt, is_special in mo.next_lines %}
+      {% for name, amount, is_exempt, is_special in mo.lines %}
       <div class="slip-row {% if is_special %}special-row{% endif %}">
         <span>{{ name }}{% if is_exempt %} <span class="exempt-tag">비과세</span>{% endif %}</span>
         <span class="amount mono">{{ "{:,}".format(amount) }}원</span>
       </div>
       {% endfor %}
       <div class="slip-net" style="padding:14px 24px;">
-        <span class="label" style="font-size:13px;">{{ next_year_label }}년 {{ mo.month_name }} 합계(예상)</span>
-        <span class="amount mono accent" style="font-size:18px;">{{ "{:,}".format(mo.next_gross) }}원</span>
+        <span class="label" style="font-size:13px;">{{ mo.month_name }} 합계(예상)</span>
+        <span class="amount mono" style="font-size:18px;">{{ "{:,}".format(mo.gross) }}원</span>
       </div>
     </div>
     {% endfor %}
