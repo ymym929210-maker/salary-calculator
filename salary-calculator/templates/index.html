@@ -34,7 +34,7 @@
       </div>
       <div class="field-row">
         <div class="field">
-          <label for="years">근속연차 (4월/10월 정근수당용)</label>
+          <label for="years">근속연차 (호봉 오르는 달 기준 그 전 연차)</label>
           <input type="number" id="years" name="years" min="1" step="0.5" value="{{ form.years }}">
         </div>
         <div class="field">
@@ -70,14 +70,15 @@
     </div>
     <p class="disclaimer" style="margin-top:-8px; margin-bottom:24px;">
       {{ current_year_label }}년은 2026년 9월 확정된 5.6% 인상 기본급을 연중 그대로 씁니다.
-      {{ next_year_label }}년은 9월부터 인상된 기본급이 적용되고, 3~8월분 기본급·상여금·시간외수당 차액(6개월치)이
-      9월에 "소급인상분"으로 한 번에 들어온다고 가정했습니다. 인상률이 아직 안 나왔으면 0으로 두세요.
+      {{ next_year_label }}년은 9월부터 인상된 기본급이 적용되고, 3~8월분 기본급·상여금·시간외수당 차액이
+      9월에 각각 "기본급소급·상여소급·시간외소급"으로 나뉘어 지급 항목에 그대로 포함됩니다
+      (4월은 상여금 대신 정근수당이 나가는 달이라 상여소급 계산에서 제외됩니다).
     </p>
 
     {% for mo in combined_months %}
     <div class="slip month-slip">
       <div class="slip-section-title month-title">
-        <span>{{ mo.month_name }}</span>
+        <span>{{ current_year_label }}년 {{ mo.month_name }}</span>
         <span class="grade-tag">{{ mo.grade_label }}</span>
       </div>
       {% for name, amount, is_exempt, is_special in mo.lines %}
@@ -87,19 +88,26 @@
       </div>
       {% endfor %}
       <div class="slip-net" style="padding:14px 24px;">
-        <span class="label" style="font-size:13px;">{{ current_year_label }}년 {{ mo.month_name }} 지급합계</span>
+        <span class="label" style="font-size:13px;">{{ current_year_label }}년 {{ mo.month_name }} 합계</span>
         <span class="amount mono" style="font-size:18px;">{{ "{:,}".format(mo.gross) }}원</span>
       </div>
-      <div class="next-year-row">
-        <span>{{ next_year_label }}년 {{ mo.month_name }} 예상 ({{ mo.next_grade_label }})</span>
-        <span class="mono accent">{{ "{:,}".format(mo.next_gross) }}원</span>
+    </div>
+
+    <div class="slip month-slip next-year-slip">
+      <div class="slip-section-title month-title">
+        <span>{{ next_year_label }}년 {{ mo.month_name }} (예상)</span>
+        <span class="grade-tag">{{ mo.next_grade_label }}</span>
       </div>
-      {% if mo.next_retro %}
-      <div class="next-year-row retro-row">
-        <span>└ 이 중 {{ next_year_label }}년 소급인상분 (3~8월분)</span>
-        <span class="mono accent">{{ "{:,}".format(mo.next_retro) }}원</span>
+      {% for name, amount, is_exempt, is_special in mo.next_lines %}
+      <div class="slip-row {% if is_special %}special-row{% endif %}">
+        <span>{{ name }}{% if is_exempt %} <span class="exempt-tag">비과세</span>{% endif %}</span>
+        <span class="amount mono">{{ "{:,}".format(amount) }}원</span>
       </div>
-      {% endif %}
+      {% endfor %}
+      <div class="slip-net" style="padding:14px 24px;">
+        <span class="label" style="font-size:13px;">{{ next_year_label }}년 {{ mo.month_name }} 합계(예상)</span>
+        <span class="amount mono accent" style="font-size:18px;">{{ "{:,}".format(mo.next_gross) }}원</span>
+      </div>
     </div>
     {% endfor %}
 

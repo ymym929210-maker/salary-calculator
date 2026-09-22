@@ -56,7 +56,13 @@ def step_for_month(start_step: int, promo_month: int, m: int) -> int:
     return start_step if m < promo_month else start_step + 1
 
 
-def calc_month(base, hourly_wage, years, family_count, overtime_hours, month, step, retro_amount=0):
+def years_for_month(start_years: float, promo_month: int, m: int) -> float:
+    # 호봉 오르는 달에 연차도 함께 한 살 올라간다고 가정 (정근수당 %에 반영)
+    return start_years if m < promo_month else start_years + 1
+
+
+def calc_month(base, hourly_wage, years, family_count, overtime_hours, month, step,
+                retro_base=0, retro_bonus=0, retro_overtime=0):
     family = family_count * config.FAMILY_ALLOWANCE_PER_PERSON
     overtime = round(overtime_hours * hourly_wage * config.OVERTIME_MULTIPLIER)
 
@@ -96,16 +102,18 @@ def calc_month(base, hourly_wage, years, family_count, overtime_hours, month, st
         items.append(("여름휴가비", summer_vacation, False, True))
     if self_dev:
         items.append(("자기계발비", self_dev, False, True))
-    if retro_amount:
-        items.append((f"소급인상분 ({config.RETRO_START_MONTH}~{config.RETRO_END_MONTH}월, 기본급·상여·시간외 포함)",
-                       retro_amount, False, True))
+    if retro_base:
+        items.append((f"기본급소급 ({config.RETRO_START_MONTH}~{config.RETRO_END_MONTH}월)",
+                       retro_base, False, True))
+    if retro_bonus:
+        items.append((f"상여소급 ({config.RETRO_START_MONTH}~{config.RETRO_END_MONTH}월)",
+                       retro_bonus, False, True))
+    if retro_overtime:
+        items.append((f"시간외소급 ({config.RETRO_START_MONTH}~{config.RETRO_END_MONTH}월)",
+                       retro_overtime, False, True))
 
     gross = sum(v for _, v, _, _ in items)
-    exempt_total = sum(v for _, v, is_exempt, _ in items if is_exempt)
-    return {
-        "month_name": MONTH_NAMES[month - 1], "step": step, "lines": items,
-        "gross": gross, "exempt_total": exempt_total,
-    }
+    return {"month_name": MONTH_NAMES[month - 1], "step": step, "lines": items, "gross": gross}
 
 
 def calc_2027(step, promo_month, years, family_count, overtime_hours_annual):
@@ -114,38 +122,48 @@ def calc_2027(step, promo_month, years, family_count, overtime_hours_annual):
     months = []
     for m in range(1, 13):
         current_step = step_for_month(step, promo_month, m)
+        current_years = years_for_month(years, promo_month, m)
         base = base_2027_for_step(current_step)
         hourly_wage = hourly_wage_for(base)
-        months.append(calc_month(base, hourly_wage, years, family_count, monthly_overtime,
-                                  m, current_step))
+        months.append(calc_month(base, hourly_wage, current_years, family_count,
+                                  monthly_overtime, m, current_step))
     year_total = sum(mo["gross"] for mo in months)
     return {"months": months, "year_total": year_total}
 
 
 def calc_2028(step, promo_month, years, family_count, overtime_hours_annual, raise_rate):
-    """2028년: 9월에 raise_rate% 인상 확정, 9월부터 적용 + 3~8월 소급(기본급/상여/시간외 전부)."""
+    """2028년: 9월에 raise_rate% 인상 확정, 9월부터 적용 + 3~8월 소급
+    (기본급소급/상여소급/시간외소급 3개 항목으로 분리, 실제 명세서 방식과 동일)."""
     monthly_overtime = overtime_hours_annual / 12
 
-    retro_total = 0
+    retro_base = 0
+    retro_bonus = 0
+    retro_overtime = 0
     for rm in range(config.RETRO_START_MONTH, config.RETRO_END_MONTH + 1):
         rm_step = step_for_month(step, promo_month, rm)
         old_base = base_2027_for_step(rm_step)
         new_base = apply_raise(old_base, raise_rate)
-        old_month = calc_month(old_base, hourly_wage_for(old_base), years, family_count,
-                                monthly_overtime, rm, rm_step)
-        new_month = calc_month(new_base, hourly_wage_for(new_base), years, family_count,
-                                monthly_overtime, rm, rm_step)
-        retro_total += (new_month["gross"] - old_month["gross"])
+        base_diff = new_base - old_base
+        retro_base += base_diff
+        if rm not in config.MONTHLY_BONUS_EXCLUDED_MONTHS:
+            retro_bonus += round(base_diff * config.MONTHLY_BONUS_RATE)
+        old_hourly = hourly_wage_for(old_base)
+        new_hourly = hourly_wage_for(new_base)
+        retro_overtime += round((new_hourly - old_hourly) * monthly_overtime * config.OVERTIME_MULTIPLIER)
 
     months = []
     for m in range(1, 13):
         current_step = step_for_month(step, promo_month, m)
+        current_years = years_for_month(years, promo_month, m)
         base_2027 = base_2027_for_step(current_step)
         base = base_2027 if m < config.RAISE_EFFECTIVE_MONTH else apply_raise(base_2027, raise_rate)
         hourly_wage = hourly_wage_for(base)
-        retro_amount = retro_total if m == config.RETRO_PAY_MONTH else 0
-        months.append(calc_month(base, hourly_wage, years, family_count, monthly_overtime,
-                                  m, current_step, retro_amount))
+        if m == config.RETRO_PAY_MONTH:
+            months.append(calc_month(base, hourly_wage, current_years, family_count, monthly_overtime,
+                                      m, current_step, retro_base, retro_bonus, retro_overtime))
+        else:
+            months.append(calc_month(base, hourly_wage, current_years, family_count, monthly_overtime,
+                                      m, current_step))
 
     year_total = sum(mo["gross"] for mo in months)
     return {"months": months, "year_total": year_total}
@@ -219,20 +237,18 @@ def index():
             form_values["family_count"], form_values["overtime_hours_annual"],
             form_values["next_raise_rate"],
         )
-        combined_months = []
-        for ty, ny in zip(this_year["months"], next_year["months"]):
-            next_retro = next(
-                (amt for name, amt, _, _ in ny["lines"] if name.startswith("소급인상분")), 0
-            )
-            combined_months.append({
+        combined_months = [
+            {
                 "month_name": ty["month_name"],
                 "grade_label": f"{config.GRADE_LABEL} {ty['step']}호봉",
                 "lines": ty["lines"],
                 "gross": ty["gross"],
+                "next_lines": ny["lines"],
                 "next_gross": ny["gross"],
                 "next_grade_label": f"{config.GRADE_LABEL} {ny['step']}호봉",
-                "next_retro": next_retro,
-            })
+            }
+            for ty, ny in zip(this_year["months"], next_year["months"])
+        ]
 
     return render_template(
         "index.html", steps=STEPS, form=form_values,

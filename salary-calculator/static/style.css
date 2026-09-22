@@ -390,3 +390,25 @@ body {
   border-radius: 3px;
   margin-left: 4px;
 }
+
+.special-row {
+  background: rgba(201, 162, 39, 0.08);
+  border-left: 3px solid var(--accent);
+  padding-left: 21px !important;
+}
+.special-row .amount {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.retro-row {
+  border-top: none;
+  padding-top: 0;
+  color: var(--accent);
+}
+
+.next-year-slip {
+  border-style: dashed;
+  opacity: 0.92;
+  margin-bottom: 28px;
+}
